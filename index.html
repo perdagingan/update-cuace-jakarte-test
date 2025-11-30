@@ -3,69 +3,729 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prakiraan Suhu Jakarta</title>
+    <title>Prakiraan Cuaca Jakarta</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
+        :root {
+            --primary: #4A90E2;
+            --primary-dark: #357ABD;
+            --secondary: #F5A623;
+            --background: #F0F4F8;
+            --card-bg: #FFFFFF;
+            --text-primary: #2D3748;
+            --text-secondary: #718096;
+            --success: #48BB78;
+            --warning: #ECC94B;
+            --danger: #F56565;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--background) 0%, #E2E8F0 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
         }
-        h1 {
-            color: #333;
+
+        /* Header Styles */
+        header {
             text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: 0 0 30px 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
         }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .location-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+
+        /* Loading Animation */
         .loading {
             text-align: center;
-            padding: 20px;
-            color: #666;
+            padding: 60px 20px;
         }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--background);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Error State */
         .error {
             text-align: center;
-            padding: 20px;
-            color: #d32f2f;
-            background-color: #ffebee;
-            border-radius: 4px;
+            padding: 40px 20px;
+            background: #FED7D7;
+            color: var(--danger);
+            border-radius: 16px;
+            margin: 20px 0;
         }
-        table {
+
+        /* Current Weather Card */
+        .current-weather {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: center;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .current-temp {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .current-temp span {
+            font-size: 2rem;
+            font-weight: 400;
+        }
+
+        .current-details {
+            margin-top: 15px;
+        }
+
+        .current-details h3 {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .current-details p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .weather-icon-large {
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .weather-icon-large svg {
             width: 100%;
-            border-collapse: collapse;
-            background-color: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            height: 100%;
+            color: var(--secondary);
+            animation: pulse 2s ease-in-out infinite;
         }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
-        th {
-            background-color: #1976d2;
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 10px;
+            color: var(--primary);
+        }
+
+        .stat-card h4 {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-card .unit {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Chart Section */
+        .chart-section {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header h2 svg {
+            color: var(--primary);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Hourly Forecast */
+        .hourly-section {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            animation: fadeInUp 0.7s ease-out;
+        }
+
+        .hourly-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 10px 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--background);
+        }
+
+        .hourly-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .hourly-scroll::-webkit-scrollbar-track {
+            background: var(--background);
+            border-radius: 3px;
+        }
+
+        .hourly-scroll::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .hourly-item {
+            flex: 0 0 auto;
+            background: linear-gradient(135deg, #F7FAFC 0%, #EDF2F7 100%);
+            border-radius: 16px;
+            padding: 15px 20px;
+            text-align: center;
+            min-width: 90px;
+            transition: all 0.3s ease;
+        }
+
+        .hourly-item:hover {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
         }
-        tr:hover {
-            background-color: #f5f5f5;
+
+        .hourly-item:hover .hourly-time,
+        .hourly-item:hover .hourly-temp {
+            color: white;
         }
-        .info {
+
+        .hourly-item:hover svg {
+            color: white;
+        }
+
+        .hourly-item.current {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .hourly-item.current .hourly-time,
+        .hourly-item.current .hourly-temp {
+            color: white;
+        }
+
+        .hourly-item.current svg {
+            color: white;
+        }
+
+        .hourly-time {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .hourly-icon {
+            width: 35px;
+            height: 35px;
+            margin: 0 auto 8px;
+            color: var(--secondary);
+        }
+
+        .hourly-temp {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Daily Table */
+        .table-section {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.8s ease-out;
+            overflow: hidden;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table thead {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .data-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table tbody tr {
+            border-bottom: 1px solid #E2E8F0;
+            transition: background-color 0.3s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: #F7FAFC;
+        }
+
+        .data-table td {
+            padding: 15px;
+            font-size: 0.9rem;
+        }
+
+        .temp-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .temp-bar {
+            width: 60px;
+            height: 6px;
+            background: #E2E8F0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .temp-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .temp-hot { background: linear-gradient(90deg, var(--warning), var(--danger)); }
+        .temp-warm { background: linear-gradient(90deg, var(--success), var(--warning)); }
+        .temp-cool { background: linear-gradient(90deg, var(--primary), var(--success)); }
+
+        .weather-condition {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            background: #F0F4F8;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .weather-condition svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Responsive table container */
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--background);
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: var(--background);
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        /* Footer */
+        footer {
             text-align: center;
-            color: #666;
-            margin-bottom: 20px;
+            padding: 30px 20px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .current-weather {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .weather-icon-large {
+                order: -1;
+                width: 100px;
+                height: 100px;
+                margin: 0 auto;
+            }
+
+            .current-temp {
+                font-size: 3rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 10px;
+                font-size: 0.8rem;
+            }
+
+            .temp-bar {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+
+            header {
+                padding: 20px 15px;
+            }
+
+            .current-weather {
+                padding: 20px;
+            }
+
+            .stat-card {
+                padding: 15px;
+            }
+
+            .hourly-section,
+            .chart-section,
+            .table-section {
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Prakiraan Suhu Per Jam Jakarta</h1>
-    <p class="info">Data dari Open-Meteo API (Latitude: -6.2, Longitude: 106.8)</p>
-    <div id="content">
-        <p class="loading">Memuat data...</p>
+    <header>
+        <h1>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            Prakiraan Cuaca Jakarta
+        </h1>
+        <p>Informasi cuaca per jam yang akurat dan terpercaya</p>
+        <div class="location-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            Jakarta, Indonesia (-6.2°, 106.8°)
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="content">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Memuat data cuaca...</p>
+            </div>
+        </div>
     </div>
 
+    <footer>
+        <p>Data cuaca dari <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo API</a> • Diperbarui secara otomatis</p>
+    </footer>
+
     <script>
-        const API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=-6.2&longitude=106.8&hourly=temperature_2m';
+        // Enhanced API with more weather data
+        const API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=-6.2&longitude=106.8&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Asia/Jakarta';
+
+        // Weather code mappings
+        const weatherCodes = {
+            0: { name: 'Cerah', icon: 'sun' },
+            1: { name: 'Cerah Berawan', icon: 'sun' },
+            2: { name: 'Berawan Sebagian', icon: 'cloud-sun' },
+            3: { name: 'Berawan', icon: 'cloud' },
+            45: { name: 'Berkabut', icon: 'cloud-fog' },
+            48: { name: 'Berkabut Tebal', icon: 'cloud-fog' },
+            51: { name: 'Gerimis Ringan', icon: 'cloud-drizzle' },
+            53: { name: 'Gerimis', icon: 'cloud-drizzle' },
+            55: { name: 'Gerimis Lebat', icon: 'cloud-drizzle' },
+            61: { name: 'Hujan Ringan', icon: 'cloud-rain' },
+            63: { name: 'Hujan', icon: 'cloud-rain' },
+            65: { name: 'Hujan Lebat', icon: 'cloud-rain' },
+            71: { name: 'Salju Ringan', icon: 'cloud-snow' },
+            73: { name: 'Salju', icon: 'cloud-snow' },
+            75: { name: 'Salju Lebat', icon: 'cloud-snow' },
+            80: { name: 'Hujan Lokal', icon: 'cloud-rain' },
+            81: { name: 'Hujan Lokal Sedang', icon: 'cloud-rain' },
+            82: { name: 'Hujan Lokal Lebat', icon: 'cloud-rain' },
+            95: { name: 'Badai Petir', icon: 'cloud-lightning' },
+            96: { name: 'Badai Petir + Hujan Es', icon: 'cloud-lightning' },
+            99: { name: 'Badai Petir Lebat', icon: 'cloud-lightning' }
+        };
+
+        // SVG Icons
+        const icons = {
+            sun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>`,
+            'cloud-sun': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v2"></path>
+                <path d="m4.93 4.93 1.41 1.41"></path>
+                <path d="M20 12h2"></path>
+                <path d="m19.07 4.93-1.41 1.41"></path>
+                <path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"></path>
+                <path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"></path>
+            </svg>`,
+            cloud: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+            </svg>`,
+            'cloud-fog': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                <path d="M16 17H7"></path>
+                <path d="M17 21H9"></path>
+            </svg>`,
+            'cloud-drizzle': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                <path d="M8 19v1"></path>
+                <path d="M8 14v1"></path>
+                <path d="M16 19v1"></path>
+                <path d="M16 14v1"></path>
+                <path d="M12 21v1"></path>
+                <path d="M12 16v1"></path>
+            </svg>`,
+            'cloud-rain': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                <path d="M16 14v6"></path>
+                <path d="M8 14v6"></path>
+                <path d="M12 16v6"></path>
+            </svg>`,
+            'cloud-snow': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                <path d="M8 15h.01"></path>
+                <path d="M8 19h.01"></path>
+                <path d="M12 17h.01"></path>
+                <path d="M12 21h.01"></path>
+                <path d="M16 15h.01"></path>
+                <path d="M16 19h.01"></path>
+            </svg>`,
+            'cloud-lightning': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"></path>
+                <path d="m13 12-3 5h4l-3 5"></path>
+            </svg>`,
+            thermometer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path>
+            </svg>`,
+            droplets: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"></path>
+                <path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"></path>
+            </svg>`,
+            wind: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"></path>
+                <path d="M9.6 4.6A2 2 0 1 1 11 8H2"></path>
+                <path d="M12.6 19.4A2 2 0 1 0 14 16H2"></path>
+            </svg>`,
+            'cloud-rain-stat': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                <path d="M16 14v6"></path>
+                <path d="M8 14v6"></path>
+                <path d="M12 16v6"></path>
+            </svg>`,
+            'bar-chart': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="20" x2="12" y2="10"></line>
+                <line x1="18" y1="20" x2="18" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>`,
+            clock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>`,
+            list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>`
+        };
+
+        function getWeatherInfo(code) {
+            return weatherCodes[code] || { name: 'Tidak Diketahui', icon: 'cloud' };
+        }
+
+        function getIcon(name) {
+            return icons[name] || icons.cloud;
+        }
 
         async function fetchWeatherData() {
             const contentDiv = document.getElementById('content');
-            
+
             try {
                 const response = await fetch(API_URL);
                 if (!response.ok) {
@@ -74,64 +734,381 @@
                 const data = await response.json();
                 displayData(data);
             } catch (error) {
-                contentDiv.innerHTML = `<p class="error">Gagal memuat data: ${error.message}</p>`;
+                contentDiv.innerHTML = `<div class="error">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <p style="margin-top: 15px; font-weight: 500;">Gagal memuat data cuaca</p>
+                    <p style="font-size: 0.9rem; margin-top: 5px;">${error.message}</p>
+                </div>`;
             }
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('id-ID', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short'
+            });
         }
 
         function formatDateTime(isoString) {
             const date = new Date(isoString);
             return date.toLocaleString('id-ID', {
                 weekday: 'short',
-                year: 'numeric',
-                month: 'short',
                 day: 'numeric',
+                month: 'short',
                 hour: '2-digit',
                 minute: '2-digit'
             });
         }
 
+        function getTempClass(temp) {
+            if (temp >= 32) return 'temp-hot';
+            if (temp >= 27) return 'temp-warm';
+            return 'temp-cool';
+        }
+
+        function getTempWidth(temp, min, max) {
+            return ((temp - min) / (max - min)) * 100;
+        }
+
+        let temperatureChart = null;
+
         function displayData(data) {
             const contentDiv = document.getElementById('content');
-            
-            if (!data || !data.hourly || !data.hourly.time || !data.hourly.temperature_2m) {
-                contentDiv.innerHTML = '<p class="error">Data tidak valid dari API</p>';
+
+            if (!data || !data.hourly) {
+                contentDiv.innerHTML = '<div class="error">Data tidak valid dari API</div>';
                 return;
             }
-            
-            const times = data.hourly.time;
-            const temperatures = data.hourly.temperature_2m;
-            const dataLength = Math.min(times.length, temperatures.length);
 
-            let tableHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Waktu</th>
-                            <th>Suhu (°C)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            const hourly = data.hourly;
+            const current = data.current || {};
+
+            // Get current hour index with fallback
+            const now = new Date();
+            let currentHourIndex = hourly.time.findIndex(t => {
+                const hourTime = new Date(t);
+                return hourTime.getHours() === now.getHours() &&
+                       hourTime.getDate() === now.getDate();
+            });
+            // Fallback to index 0 if current hour not found
+            if (currentHourIndex === -1) currentHourIndex = 0;
+
+            // Current weather values
+            const currentTemp = current.temperature_2m || hourly.temperature_2m[currentHourIndex] || '--';
+            const currentHumidity = current.relative_humidity_2m || hourly.relative_humidity_2m?.[currentHourIndex] || '--';
+            const currentFeelsLike = current.apparent_temperature || hourly.apparent_temperature?.[currentHourIndex] || '--';
+            const currentWindSpeed = current.wind_speed_10m || hourly.wind_speed_10m?.[currentHourIndex] || '--';
+            const currentWeatherCode = current.weather_code ?? hourly.weather_code?.[currentHourIndex] ?? 0;
+            const weatherInfo = getWeatherInfo(currentWeatherCode);
+
+            // Find min/max temps for scaling
+            const temps24h = hourly.temperature_2m.slice(currentHourIndex, currentHourIndex + 24);
+            const minTemp = Math.min(...temps24h);
+            const maxTemp = Math.max(...temps24h);
+
+            // Build HTML
+            let html = `
+                <!-- Current Weather -->
+                <div class="current-weather">
+                    <div>
+                        <div class="current-temp">${Math.round(currentTemp)}<span>°C</span></div>
+                        <div class="current-details">
+                            <h3>${weatherInfo.name}</h3>
+                            <p>Terasa seperti ${Math.round(currentFeelsLike)}°C</p>
+                        </div>
+                    </div>
+                    <div class="weather-icon-large">
+                        ${getIcon(weatherInfo.icon)}
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">${icons.thermometer}</div>
+                        <h4>Terasa Seperti</h4>
+                        <div class="value">${Math.round(currentFeelsLike)}<span class="unit">°C</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">${icons.droplets}</div>
+                        <h4>Kelembaban</h4>
+                        <div class="value">${currentHumidity}<span class="unit">%</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">${icons.wind}</div>
+                        <h4>Kecepatan Angin</h4>
+                        <div class="value">${Math.round(currentWindSpeed)}<span class="unit">km/j</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">${icons['cloud-rain-stat']}</div>
+                        <h4>Prob. Hujan</h4>
+                        <div class="value">${hourly.precipitation_probability?.[currentHourIndex] || 0}<span class="unit">%</span></div>
+                    </div>
+                </div>
+
+                <!-- Temperature Chart -->
+                <div class="chart-section">
+                    <div class="section-header">
+                        <h2>${icons['bar-chart']} Grafik Suhu 24 Jam</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Hourly Forecast -->
+                <div class="hourly-section">
+                    <div class="section-header">
+                        <h2>${icons.clock} Prakiraan Per Jam</h2>
+                    </div>
+                    <div class="hourly-scroll">
             `;
 
-            for (let i = 0; i < dataLength; i++) {
-                tableHTML += `
+            // Add hourly items (next 24 hours)
+            for (let i = currentHourIndex; i < currentHourIndex + 24 && i < hourly.time.length; i++) {
+                const temp = hourly.temperature_2m[i];
+                const weatherCode = hourly.weather_code?.[i] || 0;
+                const weather = getWeatherInfo(weatherCode);
+                const isNow = i === currentHourIndex;
+
+                html += `
+                    <div class="hourly-item${isNow ? ' current' : ''}">
+                        <div class="hourly-time">${isNow ? 'Sekarang' : formatTime(hourly.time[i])}</div>
+                        <div class="hourly-icon">${getIcon(weather.icon)}</div>
+                        <div class="hourly-temp">${Math.round(temp)}°</div>
+                    </div>
+                `;
+            }
+
+            html += `
+                    </div>
+                </div>
+
+                <!-- Detailed Table -->
+                <div class="table-section">
+                    <div class="section-header">
+                        <h2>${icons.list} Detail Cuaca Per Jam</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Kondisi</th>
+                                    <th>Suhu</th>
+                                    <th>Kelembaban</th>
+                                    <th>Angin</th>
+                                    <th>Hujan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            // Add table rows (next 48 hours)
+            for (let i = currentHourIndex; i < currentHourIndex + 48 && i < hourly.time.length; i++) {
+                const temp = hourly.temperature_2m[i];
+                const humidity = hourly.relative_humidity_2m?.[i] || '--';
+                const windSpeed = hourly.wind_speed_10m?.[i] || '--';
+                const precipProb = hourly.precipitation_probability?.[i] || 0;
+                const weatherCode = hourly.weather_code?.[i] || 0;
+                const weather = getWeatherInfo(weatherCode);
+                const tempClass = getTempClass(temp);
+                const tempWidth = getTempWidth(temp, minTemp - 2, maxTemp + 2);
+
+                html += `
                     <tr>
-                        <td>${formatDateTime(times[i])}</td>
-                        <td>${temperatures[i]} °C</td>
+                        <td><strong>${formatDateTime(hourly.time[i])}</strong></td>
+                        <td>
+                            <span class="weather-condition">
+                                ${getIcon(weather.icon)}
+                                ${weather.name}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="temp-indicator">
+                                <strong>${Math.round(temp)}°C</strong>
+                                <span class="temp-bar">
+                                    <span class="temp-bar-fill ${tempClass}" style="width: ${tempWidth}%"></span>
+                                </span>
+                            </span>
+                        </td>
+                        <td>${humidity}%</td>
+                        <td>${Math.round(windSpeed)} km/j</td>
+                        <td>${precipProb}%</td>
                     </tr>
                 `;
             }
 
-            tableHTML += `
-                    </tbody>
-                </table>
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             `;
 
-            contentDiv.innerHTML = tableHTML;
+            contentDiv.innerHTML = html;
+
+            // Create temperature chart
+            createChart(hourly, currentHourIndex);
+        }
+
+        function createChart(hourly, startIndex) {
+            const ctx = document.getElementById('tempChart');
+            if (!ctx) return;
+
+            // Prepare data for next 24 hours
+            const labels = [];
+            const temps = [];
+            const feelsLike = [];
+
+            for (let i = startIndex; i < startIndex + 24 && i < hourly.time.length; i++) {
+                labels.push(formatTime(hourly.time[i]));
+                temps.push(hourly.temperature_2m[i]);
+                feelsLike.push(hourly.apparent_temperature?.[i] || hourly.temperature_2m[i]);
+            }
+
+            // Destroy existing chart if any
+            if (temperatureChart) {
+                temperatureChart.destroy();
+            }
+
+            temperatureChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Suhu (°C)',
+                            data: temps,
+                            borderColor: '#4A90E2',
+                            backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#4A90E2',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Terasa Seperti (°C)',
+                            data: feelsLike,
+                            borderColor: '#F5A623',
+                            backgroundColor: 'rgba(245, 166, 35, 0.05)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#F5A623',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    family: "'Poppins', sans-serif",
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(45, 55, 72, 0.95)',
+                            titleFont: {
+                                family: "'Poppins', sans-serif",
+                                size: 14,
+                                weight: '600'
+                            },
+                            bodyFont: {
+                                family: "'Poppins', sans-serif",
+                                size: 13
+                            },
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    family: "'Poppins', sans-serif",
+                                    size: 11
+                                },
+                                color: '#718096',
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(226, 232, 240, 0.5)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: {
+                                    family: "'Poppins', sans-serif",
+                                    size: 11
+                                },
+                                color: '#718096',
+                                callback: function(value) {
+                                    return value + '°C';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Fetch data when page loads
         fetchWeatherData();
+
+        // Auto-refresh every 30 minutes (with Page Visibility API)
+        let refreshInterval = setInterval(fetchWeatherData, 30 * 60 * 1000);
+
+        // Pause refresh when page is not visible to reduce API calls
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(refreshInterval);
+            } else {
+                fetchWeatherData(); // Refresh when tab becomes visible again
+                refreshInterval = setInterval(fetchWeatherData, 30 * 60 * 1000);
+            }
+        });
     </script>
 </body>
 </html>
