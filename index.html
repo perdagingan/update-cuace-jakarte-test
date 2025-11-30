@@ -320,6 +320,10 @@
             transition: all 0.3s ease;
         }
 
+        .hourly-item {
+            cursor: pointer;
+        }
+
         .hourly-item:hover {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -345,6 +349,22 @@
         }
 
         .hourly-item.current svg {
+            color: white;
+        }
+
+        .hourly-item.selected {
+            background: linear-gradient(135deg, var(--secondary) 0%, #e6940e 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(245, 166, 35, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .hourly-item.selected .hourly-time,
+        .hourly-item.selected .hourly-temp {
+            color: white;
+        }
+
+        .hourly-item.selected svg {
             color: white;
         }
 
@@ -785,6 +805,11 @@
         }
 
         let temperatureChart = null;
+        let cachedHourlyData = null;
+        let cachedCurrentHourIndex = 0;
+        let cachedMinTemp = 0;
+        let cachedMaxTemp = 0;
+        let selectedHourIndex = null;
 
         function displayData(data) {
             const contentDiv = document.getElementById('content');
@@ -819,6 +844,13 @@
             const temps24h = hourly.temperature_2m.slice(currentHourIndex, currentHourIndex + 24);
             const minTemp = Math.min(...temps24h);
             const maxTemp = Math.max(...temps24h);
+
+            // Cache data for later use when selecting hours
+            cachedHourlyData = hourly;
+            cachedCurrentHourIndex = currentHourIndex;
+            cachedMinTemp = minTemp;
+            cachedMaxTemp = maxTemp;
+            selectedHourIndex = null;
 
             // Build HTML
             let html = `
@@ -886,7 +918,7 @@
                 const isNow = i === currentHourIndex;
 
                 html += `
-                    <div class="hourly-item${isNow ? ' current' : ''}">
+                    <div class="hourly-item${isNow ? ' current' : ''}" data-hour-index="${i}" onclick="selectHour(${i})">
                         <div class="hourly-time">${isNow ? 'Sekarang' : formatTime(hourly.time[i])}</div>
                         <div class="hourly-icon">${getIcon(weather.icon)}</div>
                         <div class="hourly-temp">${Math.round(temp)}°</div>
@@ -901,7 +933,8 @@
                 <!-- Detailed Table -->
                 <div class="table-section">
                     <div class="section-header">
-                        <h2>${icons.list} Detail Cuaca Per Jam</h2>
+                        <h2>${icons.list} <span id="table-title">Detail Cuaca Per Jam</span></h2>
+                        <p id="table-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 10px;">Klik jam di atas untuk melihat detail</p>
                     </div>
                     <div class="table-container">
                         <table class="data-table">
@@ -915,7 +948,7 @@
                                     <th>Hujan</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="weather-table-body">
             `;
 
             // Add table rows (next 48 hours)
@@ -1092,6 +1125,98 @@
                     }
                 }
             });
+        }
+
+        function selectHour(index) {
+            const hourly = cachedHourlyData;
+            if (!hourly) return;
+
+            selectedHourIndex = index;
+
+            // Update hourly item selection state
+            document.querySelectorAll('.hourly-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            const selectedItem = document.querySelector(`.hourly-item[data-hour-index="${index}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+            }
+
+            // Update table title
+            const tableTitle = document.getElementById('table-title');
+            const tableHint = document.getElementById('table-hint');
+            if (tableTitle) {
+                tableTitle.textContent = `Detail Cuaca: ${formatDateTime(hourly.time[index])}`;
+            }
+            if (tableHint) {
+                tableHint.textContent = 'Menampilkan detail untuk jam yang dipilih';
+            }
+
+            // Update table to show only selected hour
+            updateTableForSelectedHour(index);
+        }
+
+        function updateTableForSelectedHour(index) {
+            const hourly = cachedHourlyData;
+            if (!hourly) return;
+
+            const tbody = document.getElementById('weather-table-body');
+            if (!tbody) return;
+
+            const temp = hourly.temperature_2m[index];
+            const humidity = hourly.relative_humidity_2m?.[index] || '--';
+            const windSpeed = hourly.wind_speed_10m?.[index] || '--';
+            const precipProb = hourly.precipitation_probability?.[index] || 0;
+            const weatherCode = hourly.weather_code?.[index] || 0;
+            const weather = getWeatherInfo(weatherCode);
+            const tempClass = getTempClass(temp);
+            const tempWidth = getTempWidth(temp, cachedMinTemp - 2, cachedMaxTemp + 2);
+            const feelsLike = hourly.apparent_temperature?.[index] || temp;
+
+            tbody.innerHTML = `
+                <tr>
+                    <td><strong>${formatDateTime(hourly.time[index])}</strong></td>
+                    <td>
+                        <span class="weather-condition">
+                            ${getIcon(weather.icon)}
+                            ${weather.name}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="temp-indicator">
+                            <strong>${Math.round(temp)}°C</strong>
+                            <span class="temp-bar">
+                                <span class="temp-bar-fill ${tempClass}" style="width: ${tempWidth}%"></span>
+                            </span>
+                        </span>
+                    </td>
+                    <td>${humidity}%</td>
+                    <td>${Math.round(windSpeed)} km/j</td>
+                    <td>${precipProb}%</td>
+                </tr>
+                <tr>
+                    <td colspan="6" style="padding: 20px; background: #F7FAFC;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center;">
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Terasa Seperti</div>
+                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${Math.round(feelsLike)}°C</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Kelembaban</div>
+                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${humidity}%</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Kecepatan Angin</div>
+                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${Math.round(windSpeed)} km/j</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Probabilitas Hujan</div>
+                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${precipProb}%</div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
         }
 
         // Fetch data when page loads
