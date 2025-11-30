@@ -469,6 +469,37 @@
             height: 16px;
         }
 
+        /* Detail section styles */
+        .detail-section {
+            padding: 20px;
+            background: #F7FAFC;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            text-align: center;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .table-hint {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-left: 10px;
+        }
+
         /* Responsive table container */
         .table-container {
             max-height: 400px;
@@ -934,7 +965,7 @@
                 <div class="table-section">
                     <div class="section-header">
                         <h2>${icons.list} <span id="table-title">Detail Cuaca Per Jam</span></h2>
-                        <p id="table-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 10px;">Klik jam di atas untuk melihat detail</p>
+                        <p id="table-hint" class="table-hint">Klik jam di atas untuk melihat detail</p>
                     </div>
                     <div class="table-container">
                         <table class="data-table">
@@ -1127,17 +1158,17 @@
             });
         }
 
-        function selectHour(index) {
+        function selectHour(hourIndex) {
             const hourly = cachedHourlyData;
             if (!hourly) return;
 
-            selectedHourIndex = index;
+            selectedHourIndex = hourIndex;
 
             // Update hourly item selection state
             document.querySelectorAll('.hourly-item').forEach(item => {
                 item.classList.remove('selected');
             });
-            const selectedItem = document.querySelector(`.hourly-item[data-hour-index="${index}"]`);
+            const selectedItem = document.querySelector(`.hourly-item[data-hour-index="${hourIndex}"]`);
             if (selectedItem) {
                 selectedItem.classList.add('selected');
             }
@@ -1146,36 +1177,36 @@
             const tableTitle = document.getElementById('table-title');
             const tableHint = document.getElementById('table-hint');
             if (tableTitle) {
-                tableTitle.textContent = `Detail Cuaca: ${formatDateTime(hourly.time[index])}`;
+                tableTitle.textContent = `Detail Cuaca: ${formatDateTime(hourly.time[hourIndex])}`;
             }
             if (tableHint) {
                 tableHint.textContent = 'Menampilkan detail untuk jam yang dipilih';
             }
 
             // Update table to show only selected hour
-            updateTableForSelectedHour(index);
+            updateTableForSelectedHour(hourIndex);
         }
 
-        function updateTableForSelectedHour(index) {
+        function updateTableForSelectedHour(hourIndex) {
             const hourly = cachedHourlyData;
             if (!hourly) return;
 
             const tbody = document.getElementById('weather-table-body');
             if (!tbody) return;
 
-            const temp = hourly.temperature_2m[index];
-            const humidity = hourly.relative_humidity_2m?.[index] || '--';
-            const windSpeed = hourly.wind_speed_10m?.[index] || '--';
-            const precipProb = hourly.precipitation_probability?.[index] || 0;
-            const weatherCode = hourly.weather_code?.[index] || 0;
+            const temp = hourly.temperature_2m[hourIndex];
+            const humidity = hourly.relative_humidity_2m?.[hourIndex] || '--';
+            const windSpeed = hourly.wind_speed_10m?.[hourIndex] || '--';
+            const precipProb = hourly.precipitation_probability?.[hourIndex] || 0;
+            const weatherCode = hourly.weather_code?.[hourIndex] || 0;
             const weather = getWeatherInfo(weatherCode);
             const tempClass = getTempClass(temp);
             const tempWidth = getTempWidth(temp, cachedMinTemp - 2, cachedMaxTemp + 2);
-            const feelsLike = hourly.apparent_temperature?.[index] || temp;
+            const feelsLike = hourly.apparent_temperature?.[hourIndex] || temp;
 
             tbody.innerHTML = `
                 <tr>
-                    <td><strong>${formatDateTime(hourly.time[index])}</strong></td>
+                    <td><strong>${formatDateTime(hourly.time[hourIndex])}</strong></td>
                     <td>
                         <span class="weather-condition">
                             ${getIcon(weather.icon)}
@@ -1195,23 +1226,23 @@
                     <td>${precipProb}%</td>
                 </tr>
                 <tr>
-                    <td colspan="6" style="padding: 20px; background: #F7FAFC;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center;">
+                    <td colspan="6" class="detail-section">
+                        <div class="detail-grid">
                             <div>
-                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Terasa Seperti</div>
-                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${Math.round(feelsLike)}°C</div>
+                                <div class="detail-label">Terasa Seperti</div>
+                                <div class="detail-value">${Math.round(feelsLike)}°C</div>
                             </div>
                             <div>
-                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Kelembaban</div>
-                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${humidity}%</div>
+                                <div class="detail-label">Kelembaban</div>
+                                <div class="detail-value">${humidity}%</div>
                             </div>
                             <div>
-                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Kecepatan Angin</div>
-                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${Math.round(windSpeed)} km/j</div>
+                                <div class="detail-label">Kecepatan Angin</div>
+                                <div class="detail-value">${Math.round(windSpeed)} km/j</div>
                             </div>
                             <div>
-                                <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 5px;">Probabilitas Hujan</div>
-                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">${precipProb}%</div>
+                                <div class="detail-label">Probabilitas Hujan</div>
+                                <div class="detail-value">${precipProb}%</div>
                             </div>
                         </div>
                     </td>
