@@ -2,7 +2,8 @@
 
 Aplikasi web modern untuk menampilkan prakiraan cuaca per jam di Jakarta dengan tampilan UI/UX flat yang sederhana dan informatif.
 
-![Weather App Screenshot](https://github.com/user-attachments/assets/23f34174-d176-4d0f-a893-d226358e9220)
+![Weather App Screenshot](./ss1.png)
+![Weather App Screenshot2](./ss2.png)
 
 ## Fitur
 
